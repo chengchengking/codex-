@@ -17,6 +17,7 @@ import json
 import base64
 import time
 import subprocess
+import shutil
 import socket
 import urllib.request
 import urllib.error
@@ -33,17 +34,25 @@ except ImportError:
 
 
 def find_browser():
-    """Finds Chrome or Edge executable on Windows."""
-    paths = [
-        # Chrome paths
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        # Edge paths
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
-    ]
+    """Finds Chrome or Edge executable on Windows or macOS."""
+    if sys.platform == "darwin":
+        paths = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+            os.path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
+        ]
+    else:
+        paths = [
+            # Chrome paths
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+            # Edge paths
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
+        ]
     for p in paths:
         if os.path.exists(p):
             return p
@@ -61,14 +70,14 @@ def ws_handshake(sock, host, path):
         "Sec-WebSocket-Version: 13\r\n\r\n"
     )
     sock.sendall(handshake.encode())
-    
+
     response = b""
     while b"\r\n\r\n" not in response:
         chunk = sock.recv(4096)
         if not chunk:
             break
         response += chunk
-    
+
     headers, body = response.split(b"\r\n\r\n", 1)
     status_line = headers.split(b"\r\n")[0]
     if b"101" not in status_line:
@@ -80,7 +89,7 @@ def ws_send(sock, text):
     data = text.encode('utf-8')
     length = len(data)
     frame = bytearray([0x81])
-    
+
     if length <= 125:
         frame.append(0x80 | length)
     elif length <= 65535:
@@ -89,21 +98,21 @@ def ws_send(sock, text):
     else:
         frame.append(0x80 | 127)
         frame.extend(length.to_bytes(8, 'big'))
-        
+
     mask = bytearray([0x01, 0x02, 0x03, 0x04])
     frame.extend(mask)
-    
+
     masked_data = bytearray(length)
     for i in range(length):
         masked_data[i] = data[i] ^ mask[i % 4]
     frame.extend(masked_data)
-    
+
     sock.sendall(frame)
 
 
 def ws_recv(sock, buffered_data=b""):
     data = buffered_data
-    
+
     def read_bytes(n):
         nonlocal data
         while len(data) < n:
@@ -118,27 +127,27 @@ def ws_recv(sock, buffered_data=b""):
     header = read_bytes(2)
     fin_opcode = header[0]
     mask_len = header[1]
-    
+
     masked = bool(mask_len & 0x80)
     length = mask_len & 0x7f
-    
+
     if length == 126:
         length_bytes = read_bytes(2)
         length = int.from_bytes(length_bytes, 'big')
     elif length == 127:
         length_bytes = read_bytes(8)
         length = int.from_bytes(length_bytes, 'big')
-        
+
     if masked:
         mask = read_bytes(4)
-        
+
     payload = read_bytes(length)
     if masked:
         unmasked = bytearray(length)
         for i in range(length):
             unmasked[i] = payload[i] ^ mask[i % 4]
         payload = bytes(unmasked)
-        
+
     return payload.decode('utf-8'), data
 
 
@@ -148,16 +157,16 @@ def evaluate_js(ws_url, expression):
     path = parsed.path
     if parsed.query:
         path += "?" + parsed.query
-        
+
     host_parts = host.split(":")
     ip = host_parts[0]
     port = int(host_parts[1]) if len(host_parts) > 1 else 80
-    
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((ip, port))
-    
+
     buffered = ws_handshake(sock, host, path)
-    
+
     cmd = {
         "id": 1,
         "method": "Runtime.evaluate",
@@ -167,9 +176,9 @@ def evaluate_js(ws_url, expression):
             "returnByValue": True
         }
     }
-    
+
     ws_send(sock, json.dumps(cmd))
-    
+
     while True:
         msg, buffered = ws_recv(sock, buffered)
         res = json.loads(msg)
@@ -200,25 +209,25 @@ def run_auto_retrieve():
     if not browser_path:
         print("[自动获取] 提示：未在系统中找到安装的 Chrome 或 Edge 浏览器。")
         return None
-        
+
     port = 9333
     user_dir = Path.home() / ".codex" / "browser_session"
     user_dir.mkdir(parents=True, exist_ok=True)
-    
+
     cmd = [
         browser_path,
         f"--remote-debugging-port={port}",
         f"--user-data-dir={user_dir}",
         "https://chatgpt.com/",
     ]
-    
+
     print("\n[自动获取] 正在启动独立浏览器窗口...")
     print("============================================================")
     print("【第一步】如果浏览器显示未登录，请在打开的窗口中登录您的 ChatGPT 账号。")
     print("【第二步】登录成功并进入聊天界面后，辅助工具会自动捕获 Token 并完成配置！")
     print("============================================================")
     print("正在连接浏览器并检测登录状态，最长等待 3 分钟 (按 Ctrl+C 可取消)...")
-    
+
     try:
         if sys.platform == "win32":
             proc = subprocess.Popen(cmd, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -227,7 +236,7 @@ def run_auto_retrieve():
     except Exception as e:
         print(f"[自动获取] 启动浏览器失败: {e}")
         return None
-        
+
     targets = []
     for _ in range(15):
         try:
@@ -236,7 +245,7 @@ def run_auto_retrieve():
             break
         except Exception:
             time.sleep(1)
-            
+
     if not targets:
         print("[自动获取] 错误：无法连接到浏览器调试接口。")
         try:
@@ -244,7 +253,7 @@ def run_auto_retrieve():
         except:
             pass
         return None
-        
+
     js_expr = """
     fetch('/api/auth/session')
       .then(r => r.json())
@@ -259,10 +268,10 @@ def run_auto_retrieve():
          return { success: false, reason: err.message };
       })
     """
-    
+
     start_time = time.time()
     auth_data = None
-    
+
     try:
         while time.time() - start_time < 180:
             try:
@@ -272,22 +281,22 @@ def run_auto_retrieve():
                 print("\n[自动获取] 提示：与浏览器连接断开，请确保浏览器窗口未被关闭。")
                 time.sleep(2)
                 continue
-                
+
             chatgpt_target = None
             for t in targets:
                 if t.get("type") == "page" and "chatgpt.com" in t.get("url", "").lower():
                     chatgpt_target = t
                     break
-                    
+
             if not chatgpt_target:
                 time.sleep(2)
                 continue
-                
+
             ws_url = chatgpt_target.get("webSocketDebuggerUrl")
             if not ws_url:
                 time.sleep(2)
                 continue
-                
+
             try:
                 eval_res = evaluate_js(ws_url, js_expr)
                 res_val = eval_res.get("result", {}).get("value", {})
@@ -314,7 +323,7 @@ def run_auto_retrieve():
                         sys.stdout.flush()
             except Exception:
                 pass
-                
+
             time.sleep(2)
     except KeyboardInterrupt:
         print("\n[自动获取] 用户手动取消了自动获取。")
@@ -323,7 +332,7 @@ def run_auto_retrieve():
             proc.terminate()
         except:
             pass
-            
+
     if auth_data:
         return auth_data
     else:
@@ -348,26 +357,26 @@ def check_jwt_expiry(token_str):
         parts = token_str.split('.')
         if len(parts) != 3:
             return False, "Invalid JWT format"
-        
+
         # Add padding to base64 string
         payload_b64 = parts[1]
         padding = 4 - len(payload_b64) % 4
         if padding != 4:
             payload_b64 += "=" * padding
-            
+
         payload_bytes = base64.urlsafe_b64decode(payload_b64)
         payload = json.loads(payload_bytes.decode('utf-8'))
-        
+
         exp = payload.get('exp')
         if not exp:
             return True, "No exp claim found in JWT, proceeding anyway."
-            
+
         exp_time = datetime.fromtimestamp(exp, tz=timezone.utc)
         now = datetime.now(timezone.utc)
-        
+
         remaining_days = (exp_time - now).days
         remaining_hours = (exp_time - now).seconds // 3600
-        
+
         if now > exp_time:
             return False, f"Token expired on {exp_time.strftime('%Y-%m-%d %H:%M:%S')} UTC"
         else:
@@ -377,15 +386,30 @@ def check_jwt_expiry(token_str):
 
 
 def locate_codex_bin():
-    """Attempts to find the codex binary path on Windows."""
-    paths = [
-        Path.home() / "AppData" / "Local" / "OpenAI" / "Codex" / "bin" / "codex.exe",
-        Path("C:/Users") / os.getlogin() / "AppData" / "Local" / "OpenAI" / "Codex" / "bin" / "codex.exe",
-    ]
-    for p in paths:
-        if p.exists():
-            return p
-    return None
+    """Attempts to find the codex binary path on Windows or macOS."""
+    if sys.platform == "darwin":
+        # Check PATH first
+        codex_in_path = shutil.which("codex")
+        if codex_in_path:
+            return Path(codex_in_path)
+        # Common macOS install locations
+        paths = [
+            Path("/usr/local/bin/codex"),
+            Path.home() / ".local" / "bin" / "codex",
+        ]
+        for p in paths:
+            if p.exists():
+                return p
+        return None
+    else:
+        paths = [
+            Path.home() / "AppData" / "Local" / "OpenAI" / "Codex" / "bin" / "codex.exe",
+            Path("C:/Users") / os.getlogin() / "AppData" / "Local" / "OpenAI" / "Codex" / "bin" / "codex.exe",
+        ]
+        for p in paths:
+            if p.exists():
+                return p
+        return None
 
 
 def run_login_bypass(auth_data):
@@ -393,7 +417,7 @@ def run_login_bypass(auth_data):
     codex_dir = Path.home() / ".codex"
     codex_dir.mkdir(exist_ok=True)
     auth_file = codex_dir / "auth.json"
-    
+
     # 1. Backup existing auth.json
     if auth_file.exists():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -403,7 +427,7 @@ def run_login_bypass(auth_data):
             print(f"[Backup] Successfully backed up old configuration to: {backup_file.name}")
         except Exception as e:
             print(f"[Warning] Failed to back up existing auth.json: {e}")
-            
+
     # 2. Write new auth.json
     try:
         with open(auth_file, "w", encoding="utf-8") as f:
@@ -419,10 +443,10 @@ def run_login_bypass(auth_data):
         print("[Info] Codex binary not found in standard user paths. Skipping CLI status verification.")
         print("[Info] If you installed Codex in a custom location, please run 'codex login status' manually.")
         return True
-        
+
     print(f"[Verify] Found Codex executable: {codex_path}")
     print("[Verify] Checking authentication status...")
-    
+
     try:
         result = subprocess.run(
             [str(codex_path), "login", "status"],
@@ -445,18 +469,52 @@ def run_login_bypass(auth_data):
 
 def prompt_launch_codex():
     """Prompts the user to launch the Codex desktop application."""
+    if sys.platform == "darwin":
+        # On macOS, try to open the Codex.app bundle
+        codex_apps = [
+            "/Applications/Codex.app",
+            os.path.expanduser("~/Applications/Codex.app"),
+        ]
+        app_path = None
+        for p in codex_apps:
+            if os.path.exists(p):
+                app_path = p
+                break
+        if not app_path:
+            # Fall back to CLI
+            codex_bin = locate_codex_bin()
+            if not codex_bin:
+                return
+            choice = input("\nWould you like to launch Codex now? (y/n): ").strip().lower()
+            if choice in ['y', 'yes', '']:
+                print("[Launch] Starting Codex...")
+                try:
+                    subprocess.Popen([str(codex_bin)])
+                    print("[Launch] Codex process spawned. Happy coding!")
+                except Exception as e:
+                    print(f"[Error] Failed to start Codex: {e}")
+            return
+
+        choice = input("\nWould you like to launch Codex Desktop now? (y/n): ").strip().lower()
+        if choice in ['y', 'yes', '']:
+            print("[Launch] Starting Codex Desktop...")
+            try:
+                subprocess.Popen(["open", app_path])
+                print("[Launch] Codex Desktop launched. Happy coding!")
+            except Exception as e:
+                print(f"[Error] Failed to start Codex: {e}")
+        return
+
+    # Windows
     codex_path = locate_codex_bin()
     if not codex_path:
         return
-        
+
     choice = input("\nWould you like to launch Codex Desktop now? (y/n): ").strip().lower()
     if choice in ['y', 'yes', '']:
         print("[Launch] Starting Codex Desktop...")
         try:
-            if sys.platform == "win32":
-                subprocess.Popen([str(codex_path), "app"], creationflags=subprocess.CREATE_NEW_CONSOLE)
-            else:
-                subprocess.Popen([str(codex_path), "app"])
+            subprocess.Popen([str(codex_path), "app"], creationflags=subprocess.CREATE_NEW_CONSOLE)
             print("[Launch] Codex Desktop process spawned. Happy coding!")
         except Exception as e:
             print(f"[Error] Failed to start Codex: {e}")
@@ -466,29 +524,29 @@ def main():
     # Force output encoding to UTF-8 on Windows
     if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding='utf-8')
-        
+
     print_banner()
-    
+
     auth_data = None
-    
+
     # Prompt the user for selection
     print("请选择获取 ChatGPT 登录 Token 的方式：")
     print("1. [推荐] 自动获取 (自动打开浏览器窗口登录并提取，免去手动复制粘贴)")
     print("2. 手动粘帖 (使用网页控制台 JS 脚本生成的配置 JSON)")
-    
+
     try:
         choice = input("\n请输入选项 (1 或 2，默认 1): ").strip()
     except (KeyboardInterrupt, EOFError):
         choice = "2"
-        
+
     if not choice:
         choice = "1"
-        
+
     if choice == "1":
         auth_data = run_auto_retrieve()
         if not auth_data:
             print("\n[提示] 自动获取未成功，已自动切回手动粘帖模式...")
-            
+
     if not auth_data:
         # Method A: Clipboard auto-detection
         if HAS_PYPERCLIP:
@@ -504,17 +562,17 @@ def main():
                             auth_data = temp_data
                 except Exception:
                     pass
-                    
+
         if not auth_data:
             if HAS_PYPERCLIP:
                 print("[Clipboard] Clipboard did not contain valid config JSON.")
             else:
                 print("[Clipboard] Python package 'pyperclip' not installed. Auto clipboard detection disabled.")
-                
+
             print("\nPlease paste the JSON payload retrieved from your browser console below.")
             print("Press ENTER on an empty line or Ctrl+D (Ctrl+Z + Enter on Windows) when done:")
             print("-" * 60)
-            
+
             lines = []
             try:
                 while True:
@@ -524,12 +582,12 @@ def main():
                     lines.append(line)
             except (KeyboardInterrupt, EOFError):
                 print()
-                
+
             full_input = "\n".join(lines).strip()
             if not full_input:
                 print("[Error] No input detected. Exiting.")
                 sys.exit(1)
-                
+
             try:
                 auth_data = json.loads(full_input)
             except json.JSONDecodeError as e:
@@ -539,18 +597,18 @@ def main():
     # Validate JSON keys
     tokens = auth_data.get("tokens", {})
     access_token = tokens.get("access_token")
-    
+
     if not access_token:
         print("[Error] Invalid payload: Missing 'tokens.access_token'. Please ensure you copied the entire JSON.")
         sys.exit(1)
-        
+
     # Check JWT Expiration
     ok, message = check_jwt_expiry(access_token)
     print(f"\n[JWT Status] {message}")
     if not ok:
         print("[Error] Expired token. Please log into https://chatgpt.com/ and extract a fresh token.")
         sys.exit(1)
-        
+
     # Run the setup
     success = run_login_bypass(auth_data)
     if success:
@@ -558,7 +616,6 @@ def main():
     else:
         print("\n[Error] Login configuration failed. Please check your inputs and try again.")
         sys.exit(1)
-
 
 
 if __name__ == "__main__":
