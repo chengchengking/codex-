@@ -1,3 +1,5 @@
+
+
 # OpenAI Codex Login Bypass Tool (免验证码登录辅助工具)
 
 一個簡單、免配置、100% 成功率的 OpenAI Codex 登錄繞過工具。
@@ -33,7 +35,7 @@
 
 - [双击运行.bat](双击运行.bat) : Windows 平台一鍵啟動腳本。
 - [codex-auth-helper.ps1](codex-auth-helper.ps1) : 原生 PowerShell 同步內核，開源透明，無毒免殺。
-- [codex_session_extractor.js](codex_session_extractor.js) : 網頁端手動提取 Token 的備用 JavaScript 腳本。
+- [codex_session_extractor.js](codex_session_extractor.js) : 網頁端手動提取 Token 的備用 JavaScript 腳本，執行後會將生成的 Codex 配置 JSON 複製到剪貼板。
 - [cloudflare-worker/](cloudflare-worker/) : Cloudflare Worker 的完整無狀態服務端源代碼。
 
 ---
