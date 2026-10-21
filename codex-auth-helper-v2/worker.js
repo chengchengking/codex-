@@ -503,7 +503,7 @@ async function handleRequest(request, options = {}) {
   if (request.method === "POST" && url.pathname === "/api/generate-auth") {
     return jsonResponse({
       success: false,
-      message: "公开公益版默认禁用服务器端凭证处理。请使用网页生成的本地书签，所有配置会在浏览器内完成。",
+      message: "本服务不在服务器端处理凭证。请使用网页生成的本地书签，所有配置会在浏览器内完成。",
     }, 410, corsHeaders);
   }
 
@@ -602,13 +602,13 @@ function getBookmarkletRuntimeSource() {
     const storageKey = ticketId ? "codex-public-helper-bookmarklet-used:" + ticketId : "";
 
     if (!expiresAt || Date.now() > expiresAt) {
-      alert("这个书签已经过期，请回到公益网页刷新页面并重新生成书签。");
+      alert("这个书签已经过期，请回到站点页面刷新并重新生成书签。");
       return;
     }
 
     try {
       if (storageKey && window.localStorage.getItem(storageKey) === "1") {
-        alert("这个书签已经成功使用过，请回到公益网页刷新页面并重新生成书签。");
+        alert("这个书签已经成功使用过，请回到站点页面刷新并重新生成书签。");
         return;
       }
     } catch (error) {}
@@ -1279,7 +1279,7 @@ function getLegacyHtmlPage(origin) {
             <span aria-hidden="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#226b53" stroke-width="2"><path d="m20 6-11 11-5-5"/></svg>
             </span>
-            <div><strong>公益可用</strong><span>${openAccess ? "已开放免费使用，无需加入群组或输入验证码。" : "每日验证码由 QQ 群维护，当前版本免费使用。"}</span></div>
+            <div><strong>可用状态</strong><span>${openAccess ? "已开放使用，无需加入群组或输入验证码。" : "每日验证码由 QQ 群维护。"}</span></div>
           </div>
           <div class="promise">
             <span aria-hidden="true">
@@ -1356,7 +1356,7 @@ ${openAccess ? `          <div class="open-notice">
 
     <section class="info-band" id="open-source">
       <div><strong>私密种子不公开</strong><span>${openAccess ? "源码可以给人审阅；开放模式下不再需要每日验证码。" : "源码可以给人审阅，真正的每日码由你掌握的 secret 决定。"}</span></div>
-      <div><strong>无收费流程</strong><span>${openAccess ? "公益站只负责分发书签，不设门槛，也不触碰用户隐私凭证。" : "公益站只校验验证码和分发书签，不触碰用户隐私凭证。"}</span></div>
+      <div><strong>只分发书签</strong><span>${openAccess ? "站点只负责分发书签，也不触碰用户隐私凭证。" : "站点只校验验证码和分发书签，不触碰用户隐私凭证。"}</span></div>
       <div><strong>本地优先</strong><span>${openAccess ? "书签在你的浏览器内运行，公益站不默认接收用户凭证。" : "公益站只校验验证码和分发书签，不默认接收用户凭证。"}</span></div>
     </section>
   </div>

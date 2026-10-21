@@ -1,10 +1,11 @@
-# Codex Auth Helper 公益验证码版
+# Codex Auth Helper（Cloudflare Worker 版）
 
-这是一个给 QQ 群用户免费使用的 Codex `auth.json` 辅助工具。当前版本已经移除旧的 0.1 元发卡、支付回调和收款码流程，改为“每日群验证码”解锁。
+一个把已登录的 ChatGPT 网页会话转换成 Codex 可用 `auth.json` 的工具，服务端是单个 Cloudflare Worker，客户端是一个浏览器书签。
 
 核心思路：
 
-- 网页只负责校验每日验证码和生成书签。
+- 网页负责签发书签，可选地用“每日群验证码”做一道访问控制。
+- 网页签发书签；书签在 `https://chatgpt.com` 页面内本地读取会话，并在浏览器内生成 `auth.json`。
 - 书签在 `https://chatgpt.com` 页面内本地读取会话，并在浏览器内生成 `auth.json`。
 - 服务器默认不接收、不处理用户的 ChatGPT 登录凭证。
 - 每日验证码由本地生成器和 Cloudflare Worker 使用同一个私密种子生成。
@@ -38,7 +39,7 @@
 
 ```text
 今日验证码: CXA-20260625-A1B2C-3D4E5
-群公告可直接发送: 今日 Codex Auth Helper 公益验证码：CXA-20260625-A1B2C-3D4E5
+群公告可直接发送: 今日 Codex Auth Helper 验证码：CXA-20260625-A1B2C-3D4E5
 ```
 
 如果不使用网页隐藏面板，也可以把“今日验证码”复制到 QQ 群公告。Worker 默认也接受昨天和明天的码，用来避免跨午夜时区边界卡住。
@@ -109,7 +110,7 @@ http://localhost:3000
 
 ## 用户使用流程（开放模式）
 
-1. 打开公益网站 https://codex-auth.epidemicsituation.workers.dev 。
+1. 打开站点 https://codex-auth.epidemicsituation.workers.dev 。
 2. 拖动“拖到书签栏”按钮到浏览器书签栏，或点“复制书签代码”手动新建书签。
 3. 打开并登录 `https://chatgpt.com`。
 4. 点击书签，在页面右下角面板复制或下载 `auth.json`。
@@ -122,8 +123,8 @@ http://localhost:3000
 开源就是把话说明白。逐条对照源码：
 
 - **不上传你的凭证。** 书签只在你的浏览器里读取 `https://chatgpt.com/api/auth/session`，`auth.json` 在本地生成并下载。服务端 `/api/generate-auth` 已硬编码禁用（返回 `410 Gone`），服务器从不接收 ChatGPT 凭证。
-- **只碰一个域。** 整份代码（Worker 网页、书签运行时、Chrome 扩展）除 `chatgpt.com` 自身的会话接口外，没有任何第三方地址、埋点、统计脚本或远程代码加载；没有 `eval`，旧的混淆加载器 `obfuscated_loader.js` 已改成一句提示，不再加载任何东西。
-- **不收费、没有暗门。** 旧的 0.1 元发卡、支付回调、订单状态机已全部删除。管理面板的 `CODEX_ADMIN_CODE` 没有默认值——不配置就打不开，也不存在万能口令。
+- **只碰一个域。** 整份代码（Worker 网页、书签运行时、Chrome 扩展）除 `chatgpt.com` 自身的会话接口外，没有任何第三方地址、埋点、统计脚本或远程代码加载；没有 `eval`，`obfuscated_loader.js` 只是一个提示桩，不加载任何代码。
+- **没有账号体系、没有后门口令。** 全链路只有一条：网页签发书签 → 书签在浏览器本地生成 `auth.json`。管理面板的 `CODEX_ADMIN_CODE` 默认值为空，不配置就打不开，代码里也不存在任何万能口令。
 - **两个容易被误解的设计，先说清楚：**
   1. 书签 **30 分钟有效**，且**成功使用一次后失效**（`worker.js` 的 `BOOKMARKLET_TTL_MS`，防滥用）。过期后回网页刷新就能重新拿到，不加群、不要暗号。
   2. Chrome 扩展只申请 `chatgpt.com` 一个主机权限，加上 `downloads` 和 `clipboardWrite`；没有 `<all_urls>`，没有 `cookies`。

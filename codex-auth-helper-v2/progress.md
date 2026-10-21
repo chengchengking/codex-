@@ -2,9 +2,8 @@
 
 ### What changed
 
-- 移除了旧的 0.1 元/次发卡、支付回调、收款码、订单状态机和商用混淆 Loader 主链路。
-- 将 Cloudflare Worker 改为公益站：
-  - `GET /` 返回简奢风格公益网页。
+- 服务端收敛为单个 Cloudflare Worker：
+  - `GET /` 返回工具主页。
   - `POST /api/verify-code` 校验每日 QQ 群验证码。
   - 验证通过后才返回可用书签代码。
   - `POST /api/generate-auth` 默认停用，避免服务器接收用户 ChatGPT 凭证。
