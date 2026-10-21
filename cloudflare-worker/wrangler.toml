@@ -1,7 +1,0 @@
-name = "codex-sync-worker"
-main = "src/index.ts"
-compatibility_date = "2024-12-18"
-
-[[kv_namespaces]]
-binding = "CODEX_AUTH_KV"
-id = "08f7cb8f67e74cc0b041b69dd78e3bd4"

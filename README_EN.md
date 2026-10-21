@@ -1,125 +1,112 @@
 # Codex Auth Helper
 
-Turn your logged-in ChatGPT browser session into an `auth.json` that Codex can use.
+Generate the `auth.json` that Codex needs — straight from your logged-in ChatGPT browser session.
 
-The server side is a **single-file Cloudflare Worker** (zero dependencies, no database). The client side is a **bookmarklet**: click it on a ChatGPT page and the config is generated locally.
-
-- Live site: <https://codex-auth.epidemicsituation.workers.dev>
-- Main code: [`codex-auth-helper-v2/`](codex-auth-helper-v2/)
-- License: The Unlicense (public domain)
+No server, no account, no backend. Everything happens inside your own browser: read one same-origin session endpoint, then assemble the format Codex expects.
 
 ---
 
 ## How it works
 
-```
-Browser (logged into ChatGPT)
-   │  click bookmarklet → read chatgpt.com/api/auth/session
-   ▼
-Bookmarklet runtime (runs in the page, builds auth.json locally)
-   │  copy / download
-   ▼
-~/.codex/auth.json
-```
+Codex reads `~/.codex/auth.json` on startup and expects a set of OpenAI-style tokens.
+Your logged-in ChatGPT tab already holds them: `chatgpt.com/api/auth/session` returns an `accessToken`, which is a JWT whose payload carries the account info.
 
-| Component | Runs on | Role |
-|---|---|---|
-| Worker (`worker.js`) | Cloudflare edge | Renders the page, issues a time-limited bookmarklet, optionally checks a daily code |
-| Bookmarklet runtime | Inside your ChatGPT page | Reads your own session and assembles the `auth.json` Codex expects |
-| Local dev server (`server.js`) | Your machine | Local mirror of the Worker: `node server.js` |
-| Chrome extension (`popup/`, `background.js`) | Browser | Optional UI for the same session conversion |
-
-**Credentials never leave your browser.** The Worker only serves the bookmarklet source; it does not receive or store ChatGPT credentials (`/api/generate-auth` always returns `410 Gone`).
-
----
-
-## Use it without deploying
-
-1. Open <https://codex-auth.epidemicsituation.workers.dev>
-2. Drag the bookmarklet button onto your bookmarks bar (or copy the code and create it manually)
-3. Open and sign in to `https://chatgpt.com`
-4. Click the bookmarklet → copy or download `auth.json` from the panel → drop it into your Codex config directory
-
-The bookmarklet is valid for **30 minutes** and expires after one successful use (`BOOKMARKLET_TTL_MS` in `worker.js`). Refresh the site to get a fresh one.
-
----
-
-## Deploy your own
-
-```bash
-cd codex-auth-helper-v2
-npm test                                   # sanity check
-
-cp wrangler.toml.example wrangler.toml     # put your KV namespace id here
-cp .env.example .env                       # put your CODEX_DAILY_SECRET / CODEX_ADMIN_CODE here
-
-wrangler login
-wrangler kv namespace create CODEX_AUTH_STORE --binding CODEX_AUTH_STORE
-wrangler secret put CODEX_DAILY_SECRET
-wrangler secret put CODEX_ADMIN_CODE
-wrangler deploy
-```
-
-On Windows you can also right-click → "Run with PowerShell" on [`codex-auth-helper-v2/deploy_to_cloudflare.ps1`](codex-auth-helper-v2/deploy_to_cloudflare.ps1); it walks you through login and secret sync.
-
-Requires Node 18+ and a Cloudflare account.
-
----
-
-## Two access modes
-
-| Mode | Flag | Behavior |
-|---|---|---|
-| Open (current live site) | `OPEN_ACCESS = "true"` | Anyone can grab the bookmarklet, no verification |
-| Daily code | `OPEN_ACCESS = "false"` | Page asks for today's code, derived via HMAC-SHA256 from `CODEX_DAILY_SECRET`; generate it locally with `node tools/generate-daily-code.js` |
-
-Code derivation:
+So it's three steps:
 
 ```
-HMAC_SHA256(CODEX_DAILY_SECRET, "codex-auth-helper:v2:<PREFIX>:<YYYYMMDD>")
+1. read /api/auth/session on chatgpt.com        -> accessToken (JWT)
+2. decode the JWT payload                       -> chatgpt_account_id / plan / user
+3. assemble the JSON Codex expects              -> auth.json
 ```
 
-Yesterday / today / tomorrow are all accepted by default, so timezone boundaries don't lock anyone out.
+The key detail: Codex only parses `id_token` structurally, so putting the `access_token` in there as-is works. No extra token exchange needed.
 
----
+Output:
 
-## Repository layout
+```json
+{
+  "auth_mode": "chatgpt",
+  "OPENAI_API_KEY": null,
+  "tokens": {
+    "id_token": "<accessToken>",
+    "access_token": "<accessToken>",
+    "refresh_token": "",
+    "account_id": "<chatgpt_account_id>"
+  },
+  "last_refresh": "2026-10-21T12:00:00.000Z"
+}
+```
 
-| Path | Description |
+| Field | Source |
 |---|---|
-| [`codex-auth-helper-v2/`](codex-auth-helper-v2/) | **Main line**: Worker, bookmarklet runtime, local server, tests, deploy script |
-| [`codex-auth-helper-v2/worker.js`](codex-auth-helper-v2/worker.js) | Entire server-side logic (page + API + bookmarklet source) |
-| [`codex-auth-helper-v2/server.js`](codex-auth-helper-v2/server.js) | Local mirror with identical behavior |
-| [`cloudflare-worker/`](cloudflare-worker/) | Early-generation Worker (TypeScript, stateless conversion) |
-| [`codex-auth-helper.ps1`](codex-auth-helper.ps1), [`双击运行.bat`](双击运行.bat) | Early-generation Windows one-click script |
-| [`codex_session_extractor.js`](codex_session_extractor.js) | Early-generation manual session extractor for the browser console |
-
-The early-generation files are kept for reference and are no longer maintained. For a new deployment, use `codex-auth-helper-v2/`.
+| `id_token` / `access_token` | `accessToken` from the session endpoint |
+| `account_id` | `https://api.openai.com/auth.chatgpt_account_id` in the JWT payload |
+| `last_refresh` | Generation time, ISO 8601 |
+| `auth_mode` | Always `chatgpt` |
 
 ---
 
-## Privacy boundaries
+## Three ways to run it
 
-- The bookmarklet only calls `chatgpt.com/api/auth/session` (same-origin, your own session). No third-party endpoints, no telemetry, no remote code loading.
-- The Worker's KV stores only display config such as group name and group link — never tokens, cookies, or user identifiers.
-- The server does not process credentials: `/api/generate-auth` returns `410 Gone`.
-- The extension requests only `chatgpt.com` plus `downloads` and `clipboardWrite` — no `<all_urls>`, no `cookies`.
-- `CODEX_ADMIN_CODE` (admin panel passcode) defaults to empty: without configuring it the panel cannot open, and there is no built-in passcode.
-- The generated `auth.json` is equivalent to your login credentials — **do not share it**.
+### 1. Bookmarklet (simplest)
 
----
+1. Open [`bookmarklet.html`](bookmarklet.html) from this repo (a local file, no network needed)
+2. **Drag the button onto your bookmarks bar** (or copy the code from the textarea and create a bookmark manually)
+3. Open and sign in to `https://chatgpt.com`
+4. Click the bookmark → a panel appears bottom-right → copy or download `auth.json`
+5. Drop it into your Codex config directory (`~/.codex/auth.json`)
 
-## Development
+Source is [`bookmarklet.js`](bookmarklet.js), ~190 lines. Regenerate the page after editing:
 
 ```bash
-cd codex-auth-helper-v2
-npm test          # unit tests
-npm run dev       # local preview at http://localhost:3000
-npm run check     # syntax check + tests
+npm run build      # node tools/build-bookmarklet.js
 ```
+
+### 2. Chrome extension
+
+```bash
+chrome://extensions  ->  enable "Developer mode"  ->  "Load unpacked"  ->  select the extension/ folder
+```
+
+Click the icon on a ChatGPT page to fetch the session, build the config, and copy or download it. Permissions: `chatgpt.com` plus `downloads` and `clipboardWrite`. No `<all_urls>`, no `cookies`.
+
+### 3. Console snippet
+
+Nothing to install: sign in to ChatGPT, press F12, paste [`codex_session_extractor.js`](codex_session_extractor.js) into the console and hit Enter. The config lands in your clipboard.
+
+---
+
+## Limits you'll hit
+
+| Symptom | Cause |
+|---|---|
+| "not logged in" / `UNAUTHORIZED` | The page isn't signed in, or the session expired |
+| Codex asks to log in again after a few days | `access_token` is usually valid ~10 days; just rerun |
+| Only works on `chatgpt.com` | The script makes a same-origin request; cross-origin can't read the session |
+| Doesn't work after switching accounts | Generate a fresh `auth.json` |
+
+---
+
+## Privacy
+
+- Only same-origin `chatgpt.com/api/auth/session` is called. No third-party endpoints, no telemetry, no remote code loading.
+- Credentials stay in your browser: read → assembled → copied/downloaded. Nothing is sent to any server.
+- The generated `auth.json` is equivalent to your login credentials — **don't share it**.
+
+---
+
+## Layout
+
+| File | Purpose |
+|---|---|
+| `bookmarklet.js` | Bookmarklet runtime source (the core logic) |
+| `bookmarklet.html` | Drag-and-drop page generated from it; rebuild with `npm run build` |
+| `tools/build-bookmarklet.js` | Packs `bookmarklet.js` into a `javascript:` URL and writes the page |
+| `extension/` | Chrome extension (Manifest V3) |
+| `codex_session_extractor.js` | Console version, paste into DevTools |
 
 ---
 
 ## License
 
-[The Unlicense](LICENSE): public domain, use it however you like, no attribution required.
+[The Unlicense](LICENSE): public domain.

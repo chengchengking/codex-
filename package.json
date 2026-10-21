@@ -1,0 +1,9 @@
+{
+  "name": "codex-auth-helper",
+  "version": "3.0.0",
+  "private": true,
+  "description": "从浏览器里已登录的 ChatGPT 会话生成 Codex 可用的 auth.json（书签 / 扩展 / 控制台脚本三种方式）",
+  "scripts": {
+    "build": "node tools/build-bookmarklet.js"
+  }
+}

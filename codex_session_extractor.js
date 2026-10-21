@@ -1,19 +1,21 @@
 /**
- * OpenAI Codex Bypass Login - Browser Session Extractor
- * 
- * Instructions:
- * 1. Open your browser and login to https://chatgpt.com/ (your regular ChatGPT account).
- * 2. Press F12 (or Cmd+Option+I on Mac) to open Developer Tools, then click the "Console" tab.
- * 3. Copy this entire script, paste it into the console, and press Enter.
- * 4. It will fetch your session, parse the JWT, configure it for Codex, and copy the JSON payload directly to your clipboard.
- * 5. Run the python/exe companion tool to apply this configuration to your local Codex instance!
+ * Codex Auth Helper - Console version
+ *
+ * 用法：
+ * 1. 打开浏览器登录 https://chatgpt.com/
+ * 2. 按 F12（Mac 是 Cmd+Option+I）打开 DevTools，切到 Console
+ * 3. 把本文件整段粘进去回车
+ * 4. 它会读取当前会话、解析 JWT、拼成 Codex 需要的 auth.json，并复制到剪贴板
+ * 5. 粘贴保存为 ~/.codex/auth.json 即可
+ *
+ * 只请求同源的 /api/auth/session，不向任何第三方发送数据。
  */
 
 (function () {
-    console.log("%c[Codex-Bypass]%c Initiating session extraction...", "color: #10a37f; font-weight: bold;", "color: inherit;");
+    console.log("%c[Codex Auth Helper]%c 正在读取当前会话...", "color: #10a37f; font-weight: bold;", "color: inherit;");
 
     if (window.location.hostname !== "chatgpt.com") {
-        console.error("[Codex-Bypass] Error: This script must be run on https://chatgpt.com/");
+        console.error("[Codex Auth Helper] Error: This script must be run on https://chatgpt.com/");
         alert("错误：此脚本必须在 https://chatgpt.com/ 域名下运行！\n请先登录 ChatGPT，然后再控制台执行本脚本。");
         return;
     }
@@ -39,7 +41,7 @@
                 const authInfo = decodedPayload["https://api.openai.com/auth"] || {};
                 accountId = authInfo.chatgpt_account_id || "";
             } catch (err) {
-                console.warn("[Codex-Bypass] Warning: Failed to parse account_id from JWT payload:", err);
+                console.warn("[Codex Auth Helper] 解析 account_id 失败：", err);
             }
 
             // Construct the exact structure expected by OpenAI Codex CLI/Desktop
@@ -65,7 +67,7 @@
                         showSuccess(formattedJson);
                     })
                     .catch((err) => {
-                        console.error("[Codex-Bypass] Clipboard write failed, falling back to legacy copy.", err);
+                        console.error("[Codex Auth Helper] 剪贴板写入失败，改为打印输出。", err);
                         fallbackCopy(formattedJson);
                     });
             } else {
@@ -73,7 +75,7 @@
             }
         })
         .catch((err) => {
-            console.error("[Codex-Bypass] Extraction failed:", err);
+            console.error("[Codex Auth Helper] 获取失败：", err);
             alert(`获取失败！\n原因: ${err.message}\n请确保您已在网页成功登录 ChatGPT 并且网络正常。`);
         });
 
@@ -102,7 +104,7 @@
                 throw new Error("execCommand returned false");
             }
         } catch (err) {
-            console.log("[Codex-Bypass] Fallback copy failed:", err);
+            console.log("[Codex Auth Helper] Fallback copy failed:", err);
             promptForCopy(text);
         }
     }
@@ -111,14 +113,14 @@
         console.log("=== COPY THE JSON BELOW ===");
         console.log(text);
         console.log("===========================");
-        alert("无法自动复制到剪贴板。请打开控制台(F12)，复制打印出的 JSON 内容，然后运行 Python 辅助工具！");
+        alert("无法自动复制到剪贴板。请打开控制台(F12)，复制打印出的 JSON，保存为 ~/.codex/auth.json。");
     }
 
     function showSuccess(text) {
-        console.log("%c[Codex-Bypass]%c SUCCESS! Config JSON copied to clipboard.", "color: #10a37f; font-weight: bold;", "color: #a6e3a1;");
+        console.log("%c[Codex Auth Helper]%c 已生成配置并复制到剪贴板。", "color: #10a37f; font-weight: bold;", "color: #a6e3a1;");
         console.log("=== Config Payload ===");
         console.log(text);
         console.log("======================");
-        alert("✓ Token 获取并格式化成功！\n已自动复制到您的剪贴板！\n\n现在请打开终端，运行我们的 Python 辅助工具或双击运行 exe，它会自动检测并应用此配置！");
+        alert("已生成 Codex 配置并复制到剪贴板。\n把它保存为 ~/.codex/auth.json 即可。");
     }
 })();

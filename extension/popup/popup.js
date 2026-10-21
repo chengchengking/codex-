@@ -1,4 +1,4 @@
-// popup.js — Codex 认证助手公益版核心交互与校验逻辑
+// popup.js — Codex Auth Helper 扩展的交互与校验逻辑
 // 遵循纯本地处理原则，新增复制配置及离线 auth.json 解析校验模块
 
 // 缓存全局 Session 数据

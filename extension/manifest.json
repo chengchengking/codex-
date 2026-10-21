@@ -1,9 +1,9 @@
 {
    "manifest_version": 3,
-   "name": "Codex认证助手 公益版",
+   "name": "Codex Auth Helper",
    "version": "2.1.0",
    "short_name": "Codex Auth Helper",
-   "description": "公益版：在本地导出已登录 ChatGPT 会话配置，支持一键复制配置与本地 auth.json 解析校验。请勿分享生成的凭证文件。",
+   "description": "在本地导出已登录 ChatGPT 会话配置，支持一键复制配置与本地 auth.json 解析校验。请勿分享生成的凭证文件。",
    "action": {
       "default_popup": "popup/popup.html"
    },
