@@ -1,0 +1,13 @@
+{
+  "name": "codex-auth-helper-public",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Public-benefit Codex auth helper with daily QQ group verification codes.",
+  "scripts": {
+    "test": "node tests/daily-code.test.js",
+    "check": "node -c worker.js && node -c server.js && node -c tools/generate-daily-code.js && node tests/daily-code.test.js",
+    "dev": "node server.js",
+    "daily-code": "node tools/generate-daily-code.js"
+  }
+}
+

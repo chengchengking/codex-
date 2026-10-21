@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex Auth Helper 公益版预览</title>
+  <style>
+    :root {
+      --page: #f6f7f4;
+      --surface: #ffffff;
+      --ink: #151713;
+      --muted: #69706a;
+      --line: #d9ded6;
+      --gold: #b08a3c;
+      --green: #226b53;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #fff, var(--page));
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    main {
+      width: min(680px, 100%);
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 70px rgba(21, 23, 19, 0.12);
+      padding: 30px;
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 12px 0 10px;
+      font-size: 34px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    code {
+      background: #f0f3ee;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 6px;
+      color: var(--green);
+    }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    a {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: #fff;
+      padding: 0 16px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Local Preview</div>
+    <h1>公益版网站请通过本地 Worker 镜像预览。</h1>
+    <p>这个静态文件只保留为项目说明入口。完整验证码校验、书签生成和页面样式都由 <code>worker.js</code> 提供。</p>
+
+    <div class="steps">
+      <div class="step">
+        <strong>1. 生成或确认每日私密种子</strong>
+        <p>双击 <code>生成今日验证码.bat</code>，首次运行会创建本地 <code>.env</code>，之后每天输出群验证码。</p>
+      </div>
+      <div class="step">
+        <strong>2. 启动本地预览</strong>
+        <p>运行 <code>node server.js</code>，然后打开 <code>http://localhost:3000</code> 查看完整公益网站。</p>
+      </div>
+      <div class="step">
+        <strong>3. 部署到 Cloudflare Worker</strong>
+        <p>云端设置同一个 <code>CODEX_DAILY_SECRET</code> 后，本地生成器和线上验证码会保持一致。</p>
+      </div>
+    </div>
+
+    <a href="http://localhost:3000">打开本地公益站</a>
+  </main>
+</body>
+</html>

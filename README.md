@@ -2,6 +2,8 @@
 
 一個簡單、免配置、100% 成功率的 OpenAI Codex 登錄繞過工具。
 
+> **新版公益站**：[codex-auth-helper-v2/](codex-auth-helper-v2/) —— Cloudflare Worker 网页版，支持「开放模式（免暗号）」和「每日群验证码」两种模式，线上站点：<https://codex-auth.epidemicsituation.workers.dev>
+
 ## 💡 為什麼需要這個工具？
 
 在使用 OpenAI Codex 桌面客戶端進行登錄時，默認登錄流程會要求綁定並驗證**手機號**。
@@ -35,6 +37,7 @@
 - [codex-auth-helper.ps1](codex-auth-helper.ps1) : 原生 PowerShell 同步內核，開源透明，無毒免殺。
 - [codex_session_extractor.js](codex_session_extractor.js) : 網頁端手動提取 Token 的備用 JavaScript 腳本。
 - [cloudflare-worker/](cloudflare-worker/) : Cloudflare Worker 的完整無狀態服務端源代碼。
+- [codex-auth-helper-v2/](codex-auth-helper-v2/) : 新版公益站源码（Worker 网页 + 书签运行时 + 本地开发服务器），已部署上线。
 
 ---
 

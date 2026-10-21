@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex 认证助手公益版</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- 头部区域 -->
+    <header class="app-header">
+      <div class="logo-container">
+        <div class="logo-glow"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <div class="logo-text">
+          <h1>Codex 认证助手公益版</h1>
+          <span class="logo-sub">本地 • 公益 • 离线配置</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 导航选项卡 -->
+    <nav class="tab-navigation">
+      <button id="nav-btn-export" class="tab-btn active" data-target="view-export">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 9l-4-4m4 4l4-4" />
+        </svg>
+        <span>导出配置</span>
+      </button>
+      <button id="nav-btn-validate" class="tab-btn" data-target="view-validate">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>校验工具</span>
+      </button>
+      <div class="tab-indicator"></div>
+    </nav>
+
+    <!-- 主体内容区 -->
+    <main class="app-main">
+
+      <!-- 选项卡 1: 导出配置 -->
+      <section id="view-export" class="tab-view active">
+        <!-- 加载中状态 -->
+        <div id="state-loading" class="state-container active">
+          <div class="loader">
+            <div class="loader-ring"></div>
+            <div class="loader-dot"></div>
+          </div>
+          <p class="loading-text">正在安全地读取本地会话...</p>
+        </div>
+
+        <!-- 未登录状态 -->
+        <div id="state-unauthorized" class="state-container">
+          <div class="alert-icon-container">
+            <svg class="alert-icon animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 class="state-title">未检测到 ChatGPT 登录</h2>
+          <p class="state-desc" id="unauthorized-desc">请先登录 ChatGPT 账号。插件只在本地读取会话并生成配置，请勿将生成的 auth.json 分享给他人。</p>
+          <button id="btn-login" class="btn-primary ripple">
+            <span>一键跳转 ChatGPT 登录</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- 已登录状态 -->
+        <div id="state-authorized" class="state-container">
+          <!-- 账户简卡 -->
+          <div class="profile-card">
+            <div class="profile-avatar-container">
+              <img id="user-avatar" class="profile-avatar" src="" alt="用户头像">
+              <div class="avatar-ring"></div>
+            </div>
+            <div class="profile-info">
+              <h3 id="user-name">读取中...</h3>
+              <p id="user-email">读取中...</p>
+            </div>
+            <div id="badge-plan" class="plan-badge">FREE</div>
+          </div>
+
+          <!-- 数据详情面板 -->
+          <div class="details-panel glass-card">
+            <div class="detail-row">
+              <span class="detail-label">状态:</span>
+              <span class="detail-value text-glow-success">已检测会话</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">有效期至:</span>
+              <span id="token-expires" class="detail-value">读取中...</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">剩余期限:</span>
+              <span id="token-countdown" class="detail-value text-glow-green">读取中...</span>
+            </div>
+          </div>
+
+          <!-- 核心操作按钮组 -->
+          <div class="action-group-2">
+            <button id="btn-copy" class="btn-secondary ripple btn-half">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H14m0 0l3-3m-3 3l3 3" />
+              </svg>
+              <span>复制配置</span>
+            </button>
+            <button id="btn-download" class="btn-primary ripple btn-half btn-pulse">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 9l-4-4m4 4l4-4" />
+              </svg>
+              <span>导出 JSON</span>
+            </button>
+          </div>
+
+          <!-- 使用说明折叠 -->
+          <details class="accordion-card">
+            <summary class="accordion-header">
+              <h4>使用步骤提示</h4>
+              <svg class="accordion-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="accordion-content">
+              <div class="guide-steps">
+                <div class="step-item">
+                  <span class="step-num">1</span>
+                  <div class="step-content">
+                    <h5>获取配置</h5>
+                    <p>点击“复制配置”直接获取 JSON 字符串，或点击“导出 JSON”下载 <code>auth.json</code> 文件。</p>
+                  </div>
+                </div>
+                <div class="step-item">
+                  <span class="step-num">2</span>
+                  <div class="step-content">
+                    <h5>移动至目标目录</h5>
+                    <p>将 <code>auth.json</code> 移动至或直接在以下路径创建同名文件：</p>
+                    <div class="path-details">
+                      <p><strong>Windows:</strong> <code>%USERPROFILE%\.codex\auth.json</code></p>
+                      <p><strong>macOS:</strong> <code>~/.codex/auth.json</code></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="step-item">
+                  <span class="step-num">3</span>
+                  <div class="step-content">
+                    <h5>重新启动</h5>
+                    <p>保存文件后，重启您的 Codex 客户端即可读取该配置。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- 选项卡 2: 校验工具 -->
+      <section id="view-validate" class="tab-view">
+        <div class="validator-container">
+          <p class="section-desc">将您的 <code>auth.json</code> 配置文件内容粘贴在下方，即可本地解析并校验其配置时效：</p>
+          <textarea id="val-input" placeholder="请在这里粘贴 auth.json 的文本内容..." spellcheck="false"></textarea>
+          <button id="btn-validate-run" class="btn-primary ripple">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>立即校验配置</span>
+          </button>
+
+          <!-- 校验结果输出区域（默认隐藏） -->
+          <div id="val-result-box" class="val-result-box glass-card">
+            <div class="val-result-header">
+              <span class="result-title">解析结果：</span>
+              <span id="val-status-badge" class="plan-badge">健康</span>
+            </div>
+            <div class="val-result-body">
+              <div class="detail-row">
+                <span class="detail-label">账户邮箱:</span>
+                <span id="val-email" class="detail-value text-truncate">--</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">订阅套餐:</span>
+                <span id="val-plan" class="detail-value">--</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">到期时间:</span>
+                <span id="val-expires" class="detail-value">--</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">时效诊断:</span>
+                <span id="val-time-left" class="detail-value">--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 页脚隐私声明 -->
+    <footer class="app-footer">
+      <div class="safety-badge">
+        <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <span>100% 离线计算 • 数据不上传第三方</span>
+      </div>
+    </footer>
+
+    <!-- 动态 Toast 提示 -->
+    <div id="toast" class="toast-container">
+      <div class="toast-content">
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="toast-message">操作成功</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

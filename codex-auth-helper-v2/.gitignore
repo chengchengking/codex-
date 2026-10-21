@@ -1,0 +1,9 @@
+.env
+.env.local
+.env.*.local
+.wrangler/
+node_modules/
+dist/
+*.log
+auth.json
+.workbuddy-ai/
