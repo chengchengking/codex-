@@ -107,14 +107,28 @@ http://localhost:3000
 
 本地预览和 Cloudflare Worker 共用 `worker.js`，所以本地看到的页面就是线上页面。
 
-## 用户使用流程
+## 用户使用流程（开放模式）
 
-1. 加入 QQ 群，复制当天验证码。
-2. 打开公益网站，输入验证码并解锁书签生成。
-3. 拖动书签到浏览器书签栏，或复制代码后手动新建书签。
-4. 打开并登录 `https://chatgpt.com`。
-5. 点击书签，在页面右下角面板复制或下载 `auth.json`。
-6. 将 `auth.json` 放到 Codex 配置目录。
+1. 打开公益网站 https://codex-auth.epidemicsituation.workers.dev 。
+2. 拖动“拖到书签栏”按钮到浏览器书签栏，或点“复制书签代码”手动新建书签。
+3. 打开并登录 `https://chatgpt.com`。
+4. 点击书签，在页面右下角面板复制或下载 `auth.json`。
+5. 将 `auth.json` 放到 Codex 配置目录。
+
+如果切回“每日群验证码”模式（`OPEN_ACCESS = "false"`），第 1 步改为：从 QQ 群公告复制当天验证码，在网页输入后解锁书签。
+
+## 透明说明：这里没有套路
+
+开源就是把话说明白。逐条对照源码：
+
+- **不上传你的凭证。** 书签只在你的浏览器里读取 `https://chatgpt.com/api/auth/session`，`auth.json` 在本地生成并下载。服务端 `/api/generate-auth` 已硬编码禁用（返回 `410 Gone`），服务器从不接收 ChatGPT 凭证。
+- **只碰一个域。** 整份代码（Worker 网页、书签运行时、Chrome 扩展）除 `chatgpt.com` 自身的会话接口外，没有任何第三方地址、埋点、统计脚本或远程代码加载；没有 `eval`，旧的混淆加载器 `obfuscated_loader.js` 已改成一句提示，不再加载任何东西。
+- **不收费、没有暗门。** 旧的 0.1 元发卡、支付回调、订单状态机已全部删除。管理面板的 `CODEX_ADMIN_CODE` 没有默认值——不配置就打不开，也不存在万能口令。
+- **两个容易被误解的设计，先说清楚：**
+  1. 书签 **30 分钟有效**，且**成功使用一次后失效**（`worker.js` 的 `BOOKMARKLET_TTL_MS`，防滥用）。过期后回网页刷新就能重新拿到，不加群、不要暗号。
+  2. Chrome 扩展只申请 `chatgpt.com` 一个主机权限，加上 `downloads` 和 `clipboardWrite`；没有 `<all_urls>`，没有 `cookies`。
+- **不留你的使用痕迹。** KV 里只存群名/群链接和群暗号记录，不存任何 token、Cookie 或用户标识。
+- **开源副本不含真实配置。** 仓库里只有 `.env.example` 和 `wrangler.toml.example`，真实 `.env`（含 `CODEX_DAILY_SECRET`）和真实 `wrangler.toml`（含 KV id）不入库。
 
 ## 私密边界
 
@@ -122,10 +136,11 @@ http://localhost:3000
 
 - `.env`
 - `CODEX_DAILY_SECRET`
+- `CODEX_ADMIN_CODE`
 - Cloudflare Worker 的 secret 配置
 - 用户生成的 `auth.json`
 
-如果你决定“免费使用但不开源”，把仓库保持 private 即可；如果以后决定正式开源，再补充明确许可证。
+本仓库已按 The Unlicense 公开（公共领域），你可以直接 fork 自行部署；也欢迎对照上面的“透明说明”审计代码。
 
 ## 测试
 
