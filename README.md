@@ -48,6 +48,8 @@ Codex 启动时读 `~/.codex/auth.json`，里面要有一组 OpenAI 风格的 to
 
 ## 三种用法
 
+三种方式都跑在浏览器里，**Windows / macOS / Linux 通用**，没有平台差异：Chrome、Edge、Brave 都能用，扩展在 mac 上同样是 `chrome://extensions` 加载。产物统一写到 `~/.codex/auth.json`（Windows 是 `%USERPROFILE%\.codex\auth.json`）。
+
 ### 方式一：书签（最省事）
 
 1. 双击打开仓库里的 [`bookmarklet.html`](bookmarklet.html)（本地文件，不用联网）
@@ -87,6 +89,40 @@ chrome://extensions  →  打开"开发者模式"  →  "加载已解压的扩�
 
 ---
 
+## 常见报错
+
+### `Failed to refresh token: 400 Bad Request: Invalid 'refresh token'`
+
+完整报错：
+
+```
+Failed to refresh token: 400 Bad Request: Invalid 'refresh token': Expected a string
+with minimum length 1, but got an empty string instead.
+```
+
+**原因**：浏览器端只能读到 `access_token`，读不到 `refresh_token`，所以生成的 `auth.json` 里 `refresh_token` 是空字符串（见上面的字段表）。Codex 在 `access_token` 过期之后尝试刷新，就会撞上这个 400。
+
+两条路：
+
+1. **重新生成一次 `auth.json`** —— `access_token` 一般有 10 天有效期，有效期内不会触发刷新。如果本地已经有旧的 `~/.codex/config.toml`，按视频里的说明先删掉再重试。
+2. **换一个带 RT 的账号** —— 通过官方 OAuth 流程登录拿到的凭证才有真正的 `refresh_token`，不会撞这个报错。社区里的做法是用 Chrome 应用商店的 *GhostPhone - Generate Phone Numbers and Receive Verification Codes* 完成一次手机验证，再走官方登录流程。**买账号请认准带 RT 的**，只有 `access_token` 的账号过几天一定会遇到同样的报错。
+
+> 第 2 条涉及第三方接码服务，属于社区经验，风险自行判断。
+
+### 还是解决不了
+
+只发一句「闪退」是没法定位的。按下面的格式把信息整理好再发到群里：
+
+```
+1. 账号创建时间：202X.XX.XX
+2. 手机 APP 是否登录过：是/否
+3. IP 是否固定：是/否（位置）（台湾家宽 IP 不算低风险）
+4. ping0.cc 纯净度结果：xxx
+5. 接码次数（新号码验证 / 老号码验证）
+```
+
+---
+
 ## 隐私边界
 
 - 只请求同源的 `chatgpt.com/api/auth/session`，没有第三方接口、没有埋点、没有远程代码加载。
@@ -104,6 +140,15 @@ chrome://extensions  →  打开"开发者模式"  →  "加载已解压的扩�
 | `tools/build-bookmarklet.js` | 把 `bookmarklet.js` 打包成 `javascript:` 链接并生成页面 |
 | `extension/` | Chrome 扩展（Manifest V3） |
 | `codex_session_extractor.js` | 控制台版脚本，粘进 DevTools 即可用 |
+| `codex_auth_helper.py` | 旧版 Python 工具（Windows / macOS，可选）。自动读取会话、写入 `auth.json`、调用 Codex CLI 校验。macOS 适配由 [@QingsiLiu](https://github.com/QingsiLiu) 贡献（[#1](https://github.com/chengchengking/codex-/pull/1)） |
+
+---
+
+## 交流
+
+- QQ 群：**1097037568**
+- 视频教程：[免费 Codex 重复验证免手机号验证教程（B 站）](https://b23.tv/1f4CTpN)
+- 在线版：<https://codex-auth.epidemicsituation.workers.dev>
 
 ---
 

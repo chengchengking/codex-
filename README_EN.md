@@ -48,6 +48,8 @@ Output:
 
 ## Three ways to run it
 
+All three run inside the browser and are **platform-agnostic — Windows, macOS and Linux all work**. Chrome, Edge and Brave are fine; on macOS the extension loads the same way via `chrome://extensions`. Output always goes to `~/.codex/auth.json` (`%USERPROFILE%\.codex\auth.json` on Windows).
+
 ### 1. Bookmarklet (simplest)
 
 1. Open [`bookmarklet.html`](bookmarklet.html) from this repo (a local file, no network needed)
@@ -87,6 +89,46 @@ Nothing to install: sign in to ChatGPT, press F12, paste [`codex_session_extract
 
 ---
 
+## Troubleshooting
+
+### `Failed to refresh token: 400 Bad Request: Invalid 'refresh token'`
+
+```
+Failed to refresh token: 400 Bad Request: Invalid 'refresh token': Expected a string
+with minimum length 1, but got an empty string instead.
+```
+
+**Why**: the browser can only read `access_token`, never `refresh_token`, so the generated `auth.json` carries an empty `refresh_token` (see the field table above). Once `access_token` expires, Codex tries to refresh with that empty string and gets the 400.
+
+Two ways out:
+
+1. **Regenerate `auth.json`** — `access_token` is usually good for ~10 days and won't trigger a refresh inside that window. If you already have a stale `~/.codex/config.toml`, delete it first (see the video walkthrough).
+2. **Use an account that comes with an RT** — only credentials obtained through the official OAuth flow carry a real `refresh_token`. A commonly shared community workaround is to complete one phone verification with the *GhostPhone - Generate Phone Numbers and Receive Verification Codes* Chrome extension and then go through the official login. **If you buy an account, make sure it includes an RT**; access-token-only accounts will hit this same error within days.
+
+> Option 2 relies on third-party SMS-verification services. Community practice, use your own judgement.
+
+### Still stuck
+
+"it crashes" alone can't be diagnosed. Gather the details below and post them in the group:
+
+```
+1. Account creation date: YYYY.MM.DD
+2. Has the mobile app ever been logged in: yes/no
+3. Is the IP static: yes/no (location) (Taiwan residential broadband doesn't count as low-risk)
+4. Result from ping0.cc purity check: xxx
+5. Number of SMS verifications (new number / existing number)
+```
+
+---
+
+## Community
+
+- QQ group: **1097037568**
+- Video walkthrough (Bilibili): [免费 Codex 重复验证免手机号验证教程](https://b23.tv/1f4CTpN)
+- Hosted version: <https://codex-auth.epidemicsituation.workers.dev>
+
+---
+
 ## Privacy
 
 - Only same-origin `chatgpt.com/api/auth/session` is called. No third-party endpoints, no telemetry, no remote code loading.
@@ -104,6 +146,7 @@ Nothing to install: sign in to ChatGPT, press F12, paste [`codex_session_extract
 | `tools/build-bookmarklet.js` | Packs `bookmarklet.js` into a `javascript:` URL and writes the page |
 | `extension/` | Chrome extension (Manifest V3) |
 | `codex_session_extractor.js` | Console version, paste into DevTools |
+| `codex_auth_helper.py` | Legacy Python tool (Windows / macOS, optional). Reads the session, writes `auth.json`, verifies via the Codex CLI. macOS support contributed by [@QingsiLiu](https://github.com/QingsiLiu) ([#1](https://github.com/chengchengking/codex-/pull/1)) |
 
 ---
 
